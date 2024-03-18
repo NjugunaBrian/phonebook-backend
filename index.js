@@ -1,7 +1,9 @@
 const express = require("express")
 const app = express()
+const morgan = require("morgan")
 
 app.use(express.json())
+app.use(morgan('tiny'))
 
 let persons = [
     {
@@ -41,30 +43,40 @@ app.get('/api/persons/:id', (request, response) => {
     response.json(person);
 })
 
-function generateId() {
+/*function generateId() {
     // Generate a random hexadecimal string of length 16
     const randomHex = [...Array(16)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
     
     return randomHex;
   }
+*/  
 
 app.post('/api/persons', (request, response) => {
+    const maxId = persons.length > 0 ? Math.max(...persons.map(p => p.id)) : 0;
+
     let body = request.body
 
-    if(!body.name){
+    if(body.name === ''){
         return response.status(400).json({
             error: 'name is missing'
         })
     }
+    //check is the name already exists
+    const nameExists = persons.some(person => person.name === body.name);
+    if (nameExists){
+        return response.status(400).json({
+            error: 'name must be unique'
+        })
+    }
 
-    if(!body.number){
+    if(body.number === ''){
         return response.status(400).json({
             error:'number is missing'
         })
     }
 
     const person = {
-        id: generateId(),
+        id: maxId + 1,
         name: body.name,
         number: body.number,
         
@@ -82,6 +94,13 @@ app.delete('/api/persons/:id', (request, response) => {
 
     response.status(204).end();
 })
+
+
+const unkwownEndPoint = (request, response) => {
+    response.status(404).send({ error: 'unkwown endpoint' })
+}
+
+app.use(unkwownEndPoint);
 
 const PORT = 3001
 app.listen(PORT, () => {
